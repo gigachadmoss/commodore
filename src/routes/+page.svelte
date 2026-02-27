@@ -20,15 +20,17 @@
   })();
   
   (async () => {
-    const checkSevenZip = async () => {
-      if (!await invoke("sevenzip_installed")) {
-        depInstallRequired = MissingDep.SevenZip;
-        setTimeout(checkSevenZip, 2000);
-      } else {
-        depInstallRequired = MissingDep.None;
-      }
-    };
-    checkSevenZip();
+    if (os === "windows" || os === "linux") {
+      const checkSevenZip = async () => {
+        if (!await invoke("sevenzip_installed")) {
+          depInstallRequired = MissingDep.SevenZip;
+          setTimeout(checkSevenZip, 2000);
+        } else {
+          depInstallRequired = MissingDep.None;
+        }
+      };
+      checkSevenZip();
+    }
   })();
 </script>
 

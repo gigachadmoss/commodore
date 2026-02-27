@@ -8,8 +8,19 @@ use tokio::{
 };
 use tokio_stream::StreamExt;
 
+#[cfg(target_os = "windows")]
 const BRIGADIER_URL: &str =
     "https://github.com/timsutton/brigadier/releases/download/0.2.6/brigadier.exe";
+#[cfg(target_os = "macos")]
+const BRIGADIER_URL: &str =
+    "https://raw.githubusercontent.com/gigachadmoss/brigadier3/eccc7d238ff4ebb7f4f767c807f2a7ef77f6e896/brigadier";
+#[cfg(target_os = "linux")]
+const BRIGADIER_URL: &str =
+    "https://raw.githubusercontent.com/gigachadmoss/brigadier3/eccc7d238ff4ebb7f4f767c807f2a7ef77f6e896/brigadier";
+
+#[cfg(any(target_os = "macos", target_os = "linux"))]
+const BRIGADIER_PERMISSIONS: u32 = 0o755;
+
 #[cfg(all(target_os = "windows", target_arch = "aarch64"))]
 const SEVENZIP_INSTALLER_URL: &str = "https://www.7-zip.org/a/7z2600-arm64.exe";
 #[cfg(all(target_os = "windows", target_arch = "x86_64"))]
@@ -195,6 +206,19 @@ async fn check_brigadier(brigadier_path: &std::path::Path) -> Result<(), String>
             .map_err(|e| e.to_string())?;
     }
 
+    #[cfg(any(target_os = "macos", target_os = "linux"))]
+    {
+        use std::os::unix::fs::PermissionsExt;
+
+        let metadata = tokio::fs::metadata(brigadier_path)
+            .await
+            .map_err(|e| format!("Failed to get brigadier metadata: {}", e))?;
+
+        let mut permissions = metadata.permissions();
+
+        permissions.set_mode(BRIGADIER_PERMISSIONS);
+    }
+
     Ok(())
 }
 
@@ -211,6 +235,15 @@ async fn download_file(
     let file = File::create(destination)
         .await
         .map_err(|e| format!("Failed to download file: {}", e))?;
+
+    #[cfg(any(target_os = "macos", target_os = "linux"))]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        let permissions = std::fs::Permissions::from_mode(0o755);
+        tokio::fs::set_permissions(destination, permissions)
+            .await
+            .map_err(|e| format!("Failed to set permissions: {}", e))?;
+    }
 
     let mut writer = BufWriter::new(file);
 
@@ -285,7 +318,12 @@ pub fn run() {
             }
 
             let brigadier_data_path = data_path.join("brigadier_data");
+            #[cfg(target_os = "windows")]
             let brigadier_path = data_path.join("brigadier.exe");
+            #[cfg(target_os = "macos")]
+            let brigadier_path = data_path.join("brigadier");
+            #[cfg(target_os = "linux")]
+            let brigadier_path = data_path.join("brigadier");
 
             if !brigadier_data_path.is_dir() {
                 if let Err(e) = create_dir_all(&brigadier_data_path) {
