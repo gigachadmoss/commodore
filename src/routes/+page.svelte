@@ -14,12 +14,10 @@
 
   let os: string = "";
   let depInstallRequired = MissingDep.None;
-
-  (async () => {
-    os = (await invoke("get_os")) as string;
-  })();
   
   (async () => {
+    os = (await invoke("get_os")) as string;
+
     if (os === "windows" || os === "linux") {
       const checkSevenZip = async () => {
         if (!await invoke("sevenzip_installed")) {
