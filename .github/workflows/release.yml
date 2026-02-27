@@ -45,6 +45,9 @@ jobs:
         with:
           targets: ${{ matrix.toolchains }}
 
+      - name: Install bindgen-cli
+        run: cargo install --force --locked bindgen-cli
+
       - name: install frontend dependencies
         run: pnpm install
 
